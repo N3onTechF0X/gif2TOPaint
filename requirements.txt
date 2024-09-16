@@ -1,2 +1,2 @@
 Pillow
-moviepy
+opencv-python
