@@ -1,11 +1,12 @@
 from PIL import Image, ImageSequence
-from moviepy.editor import VideoFileClip
 import json
 import math
 import os
+import cv2
 
 
-def process_image_frames(image, frame_width, frame_height):
+def process_image_frames(path, frame_width, frame_height):
+    image = Image.open(path)
     frames = [
         frame.resize((frame_width, frame_height), Image.LANCZOS).convert("RGB")
         for i, frame in enumerate(ImageSequence.Iterator(image))
@@ -16,14 +17,17 @@ def process_image_frames(image, frame_width, frame_height):
 
 
 def process_video_frames(path, frame_width, frame_height):
-    clip = VideoFileClip(path)
-    fps = clip.fps
-    frames = [
-        Image.fromarray(frame).resize((frame_width, frame_height), Image.LANCZOS).convert("RGB")
-        for frame in clip.iter_frames()
-    ]
-    durations = [1000 // fps] * len(frames)
-    return frames, durations
+    cap = cv2.VideoCapture(path)
+    frames = []
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    while True:
+        ret, frame = cap.read()
+        if not ret: break
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = Image.fromarray(frame).resize((frame_width, frame_height), Image.LANCZOS)
+        frames.append(frame)
+    cap.release()
+    return frames, [1000 // fps] * len(frames)
 
 
 def main(path):
@@ -31,8 +35,7 @@ def main(path):
     file_ext = os.path.splitext(path)[1].lower()
 
     if file_ext in ['.gif', '.webp']:
-        image = Image.open(path)
-        frames, durations = process_image_frames(image, frame_width, frame_height)
+        frames, durations = process_image_frames(path, frame_width, frame_height)
     elif file_ext == '.mp4':
         frames, durations = process_video_frames(path, frame_width, frame_height)
     else:
